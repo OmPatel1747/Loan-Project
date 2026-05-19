@@ -1,0 +1,33 @@
+---
+title: "EDA"
+author: "Om Patel"
+date: "2026-05-19"
+output: html_document
+---
+
+```{r setup, include=TRUE}
+library(ggplot2)
+library(patchwork)
+library(knitr)
+df <- read.csv("C:\\Users\\omp01\\OneDrive - University of Illinois - Urbana\\Loan Project\\archive\\loan_approval_dataset.csv")
+
+n <- nrow(df)
+train_id <- sample(seq_len(n), size = round(0.8 * n))
+train_dat <- df[train_id, ] #For the model building and comparison, only use train_dat.
+test_dat  <- df[-train_id, ]
+data_info <- data.frame(
+  Item = c("Training set sample size", "Test set sample size", "Number of predictors", "Missing values"),
+  Value = c(nrow(train_dat), nrow(test_dat), ncol(train_dat) - 1, sum(is.na(train_dat)))
+)
+
+kable(data_info, caption = "Basic data information")
+kable
+```
+
+**FINDINGS**: we can see here that we have no missing datapoints, 12 predictors and we have split up the data randomly to a training dataset and a testing dataset.
+
+```{r}
+#Next step is to do eda summary of certian variables we think at first glance are important. 
+
+
+```
