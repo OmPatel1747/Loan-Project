@@ -11,6 +11,11 @@ library(patchwork)
 library(knitr)
 df <- read.csv("C:\\Users\\omp01\\OneDrive - University of Illinois - Urbana\\Loan Project\\archive\\loan_approval_dataset.csv")
 
+#making them binary
+df$loan_status_binary <- ifelse(df$loan_status == " Approved", 1, 0)
+df$edu_binary <- ifelse(df$education == " Graduate", 1,0)
+df$self_employed_binary <- ifelse(df$self_employed == " Yes", 1,0)
+
 n <- nrow(df)
 train_id <- sample(seq_len(n), size = round(0.8 * n))
 train_dat <- df[train_id, ] #For the model building and comparison, only use train_dat.
@@ -21,13 +26,71 @@ data_info <- data.frame(
 )
 
 kable(data_info, caption = "Basic data information")
-kable
 ```
 
-**FINDINGS**: we can see here that we have no missing datapoints, 12 predictors and we have split up the data randomly to a training dataset and a testing dataset.
+**FINDINGS**: we can see here that we have no missing data points, 12 predictors and we have split up the data randomly to a training data set and a testing data set.
+
 
 ```{r}
 #Next step is to do eda summary of certian variables we think at first glance are important. 
+eda_summary <- data.frame(
+  Variable = c("loan_status_binary", "no_of_dependents", "edu_binary", "self_employed_binary", "income_annum", "loan_amount", "cibil_score", "bank_asset_value"),
+  Mean = sapply(train_dat[, c("loan_status_binary", "no_of_dependents", "edu_binary", "self_employed_binary", "income_annum", "loan_amount", "cibil_score", "bank_asset_value")], mean),
+  
+  Median = sapply(train_dat[, c("loan_status_binary", "no_of_dependents", "edu_binary", "self_employed_binary", "income_annum", "loan_amount", "cibil_score", "bank_asset_value")], median),
+  
+  Min = sapply(train_dat[, c("loan_status_binary", "no_of_dependents", "edu_binary", "self_employed_binary", "income_annum", "loan_amount", "cibil_score", "bank_asset_value")], min),
+  
+  Max = sapply(train_dat[, c("loan_status_binary", "no_of_dependents", "edu_binary", "self_employed_binary", "income_annum", "loan_amount", "cibil_score", "bank_asset_value")], max)
+  
+)
 
+
+kable(eda_summary, digits = 3, caption = "Summary of selected variables")
 
 ```
+
+
+```{r} 
+#CORR TABLE 
+numeric_vars <- train_dat[, sapply(train_dat, is.numeric)]
+cor_matrix <- cor(numeric_vars)
+
+high_cor_pairs <- which(abs(cor_matrix) > 0.7 & abs(cor_matrix) < 1, arr.ind = TRUE)
+
+high_cor_table <- data.frame(
+  Variable_1 = rownames(cor_matrix)[high_cor_pairs[, 1]],
+  Variable_2 = colnames(cor_matrix)[high_cor_pairs[, 2]],
+  Correlation = cor_matrix[high_cor_pairs]
+)
+
+high_cor_table <- high_cor_table[high_cor_table$Variable_1 < high_cor_table$Variable_2, ]
+
+kable(high_cor_table, digits = 3,
+      caption = "Pairs of variables with absolute correlation greater than 0.7")
+
+```
+The correlation table shows that loan status is highly correlated with an individuals cibil score. There are also strong correlations among predictors such as annual income and loan amount.This suggests that multicollinearity may be a concern in the full regression model. 
+
+```{r}
+important_vars <- c(
+  "loan_status_binary", "no_of_dependents", "edu_binary", "self_employed_binary", "income_annum", "loan_amount", "cibil_score", "bank_asset_value"
+)
+
+plots <- lapply(important_vars[-1], function(x) {
+  ggplot(train_dat, aes_string(x = "factor(loan_status_binary)", y = x, fill = "factor(loan_status_binary)")) +
+    geom_boxplot(alpha = 0.7, outlier.size = 0.8) +
+    labs(x = "Loan Status (0 = Rejected, 1 = Approved)", y = x) +
+    ggtitle(paste(x, "by Loan Status")) +
+    scale_fill_manual(values = c("orange", "blue"), guide = "none") + # Clean colors, removes legend
+    theme_minimal() +
+    theme(
+      plot.title = element_text(size = 9),
+      axis.title = element_text(size = 8),
+      axis.text = element_text(size = 7)
+    )
+})
+wrap_plots(plots, ncol = 3)
+```
+
+**Decision:** The EDA suggests that loan status is strongly related to cibil score, while other predictors are strongly correlated with others such as annual income and luxury assets value. This suggests possible multicollinearly among predictors. The box plots also show some unusual observations. Based on these patterns, we begin with a full model, check diagnosis, and then consider transformations, outlier removal, and variable selection
