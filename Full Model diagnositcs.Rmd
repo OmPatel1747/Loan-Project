@@ -1,0 +1,41 @@
+---
+title: "Full Model"
+author: "Om Patel"
+date: "2026-06-19"
+output: html_document
+---
+
+```{r setup, include=TRUE}
+set.seed(123)
+
+full_model <- glm(loan_status_binary ~ . - loan_status - self_employed - education, data = train_dat, family = binomial)
+model_intercept <- glm(loan_status_binary ~ 1, data = train_dat, family = binomial)
+
+summary(full_model)
+anova(model_intercept, full_model)
+```
+**FINDINGS**: Some significant variables according to the full model are: income_annum, loan amount, loan term, cibil score, and luxury assets value (p-value <0.05). We also have strong evidence to reject the null hypothesis as p-value is close to 0 (< 0.05). It seems that the model explains significant variation in loan status. 
+
+## Diagnostics
+```{r}
+library(car)
+library(lmtest)
+#Diagnositc plots
+#par(mfrow=c(1,4))
+#plot(full_model)
+#plot(cooks.distance(full_model))
+plot(full_model)
+cooks <-cooks.distance(full_model)
+
+#which(cooks > 4/3415)
+```
+**FINDINGS** In the Q-Q Residual plot, the points deivaite from the line which gives evidence that there could be non-constant errors. We will now do some formal testings. There are a handful of points slightly greater than the cooks distance thresehold but since the amount of values in  the dataset is high, these shouldn't be too much of a worry.
+
+```{r}
+
+vif_values <- vif(full_model)  
+vif_values[vif_values > 10]
+plot(cooks.distance(full_model))
+
+```
+Based on the variance inflation factor test, 1 variable is over 10 which is annunal income.
